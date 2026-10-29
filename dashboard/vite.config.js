@@ -6,7 +6,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/Inti-Illimani/',
+  base: '/',
   build: {
     outDir: '../docs',
     emptyOutDir: true
