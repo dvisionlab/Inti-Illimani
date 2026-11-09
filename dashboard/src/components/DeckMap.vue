@@ -42,6 +42,10 @@ const props = defineProps({
     type: Array,
     required: true
   },
+  route: {
+    type: Array,
+    default: () => []
+  },
   viewState: {
     type: Object,
     required: true
@@ -64,7 +68,27 @@ const tooltipInfo = ref(null);
 const showColumns = ref(true);
 
 const resetMap = () => {
-  emit("update:viewState", { ...defaultViewState });
+  const pts = props.route.length
+    ? props.route
+    : props.data.filter(d => d.position && d.position.length >= 2).map(d => d.position);
+  if (!pts.length) {
+    emit("update:viewState", { ...defaultViewState });
+    return;
+  }
+  const lons = pts.map(p => p[0]);
+  const lats = pts.map(p => p[1]);
+  const lat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const span = Math.max(
+    (Math.max(...lons) - Math.min(...lons)) * Math.cos((lat * Math.PI) / 180),
+    Math.max(...lats) - Math.min(...lats),
+    1e-4
+  );
+  emit("update:viewState", {
+    ...defaultViewState,
+    longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+    latitude: lat,
+    zoom: Math.max(3, Math.min(14, Math.log2(1200 / span) - 1.5))
+  });
 };
 
 const toggleColumns = () => {
@@ -129,8 +153,8 @@ watch(
 );
 
 watch(
-  () => props.data,
-  newData => {
+  () => [props.data, props.route],
+  ([newData]) => {
     if (deckInstance) {
       updateLayers(newData);
     }
@@ -144,9 +168,10 @@ function updateLayers(mapData) {
   const validData = mapData.filter(d =>
     Boolean(d.position && d.position.length >= 2 && d.position[0] !== 0 && d.position[1] !== 0)
   );
-  const lineData = [...validData]
-    .sort((a, b) => a.kp - b.kp)
-    .map(d => d.position);
+  // Tracciato completo se disponibile, altrimenti punti di ispezione ordinati per kp
+  const lineData = props.route.length
+    ? props.route
+    : [...validData].sort((a, b) => a.kp - b.kp).map(d => d.position);
 
   deckInstance.setProps({
     layers: [
