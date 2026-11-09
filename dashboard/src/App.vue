@@ -113,6 +113,10 @@
             <strong class="text-slate-300">Lunghezza Valutata:</strong>
             {{ stats.lengthKm }} km
           </li>
+          <li v-if="routeLengthKm > 0">
+            <strong class="text-slate-300">Lunghezza Tracciato:</strong>
+            {{ routeLengthKm.toFixed(1) }} km
+          </li>
         </ul>
       </div>
     </div>
@@ -170,6 +174,11 @@ const pipelineData = computed(() => {
 const pipelineRoute = computed(() => {
   const z = zones.value.find(z => z.id === selectedZoneId.value);
   return z && z.route ? z.route : [];
+});
+
+const routeLengthKm = computed(() => {
+  const z = zones.value.find(z => z.id === selectedZoneId.value);
+  return z && z.routeLengthKm ? z.routeLengthKm : 0;
 });
 
 const viewState = ref({

@@ -63,7 +63,7 @@ function loadAndParse(filename, sheetName) {
 // Legge il tracciato completo (colonne: metro, lat, lng) e lo decima ogni `step` punti,
 // mantenendo sempre l'ultimo. Restituisce [[lng, lat], ...] ordinato per metro.
 function loadRoute(filename, sheetName, step = 1) {
-    if (!fs.existsSync(filename)) return [];
+    if (!fs.existsSync(filename)) return { points: [], lengthKm: 0 };
     const wb = xlsx.readFile(filename);
     const sheet = wb.Sheets[sheetName];
     if (!sheet) {
@@ -72,9 +72,12 @@ function loadRoute(filename, sheetName, step = 1) {
     const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 })
         .filter(r => [0, 1, 2].every(i => typeof r[i] === 'number'))
         .sort((a, b) => a[0] - b[0]);
-    return rows
+    const points = rows
         .filter((r, i) => i % step === 0 || i === rows.length - 1)
         .map(r => [r[2], r[1]]);
+    // Lunghezza dalla colonna dei metri (non dalla somma dei segmenti GPS, sensibile al rumore)
+    const lengthKm = rows.length ? (rows[rows.length - 1][0] - rows[0][0]) / 1000 : 0;
+    return { points, lengthKm };
 }
 
 function run() {
@@ -99,13 +102,15 @@ function run() {
             id: "chile",
             name: "Minera Escondida - ME-BHP-2026-001 (Cile)",
             data: chileData,
-            route: chileRoute
+            route: chileRoute.points,
+            routeLengthKm: chileRoute.lengthKm
         },
         {
             id: "madagascar",
             name: "Madagascar - Adjusted records (12.7 mm base)",
             data: madagascarData,
-            route: madagascarRoute
+            route: madagascarRoute.points,
+            routeLengthKm: madagascarRoute.lengthKm
         }
     ];
 
