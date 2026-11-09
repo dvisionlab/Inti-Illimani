@@ -64,7 +64,18 @@ const tooltipInfo = ref(null);
 const showColumns = ref(true);
 
 const resetMap = () => {
-  emit("update:viewState", { ...defaultViewState });
+  const pts = props.data.filter(d => d.position && d.position.length >= 2);
+  if (!pts.length) {
+    emit("update:viewState", { ...defaultViewState });
+    return;
+  }
+  const lons = pts.map(d => d.position[0]);
+  const lats = pts.map(d => d.position[1]);
+  emit("update:viewState", {
+    ...defaultViewState,
+    longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+    latitude: (Math.min(...lats) + Math.max(...lats)) / 2
+  });
 };
 
 const toggleColumns = () => {

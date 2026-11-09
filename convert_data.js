@@ -2,13 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const xlsx = require('xlsx');
 
-function loadAndParse(filename) {
+function loadAndParse(filename, sheetName) {
     if (!fs.existsSync(filename)) {
         console.log("File not found:", filename);
         return [];
     }
     const wb = xlsx.readFile(filename);
-    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const sheet = wb.Sheets[sheetName];
+    if (!sheet) {
+        throw new Error(`Sheet "${sheetName}" not found in ${filename} (available: ${wb.SheetNames.join(', ')})`);
+    }
     const rawData = xlsx.utils.sheet_to_json(sheet);
 
     const parsedData = [];
@@ -58,38 +61,35 @@ function loadAndParse(filename) {
 }
 
 function run() {
-    const file1 = path.join(__dirname, 'data/BHP_POF_DataExport_ME-BHP-2026-001.xlsx');
-    const file2 = path.join(__dirname, 'data/Adjusted records (12.7 mm base).xlsx');
-    const file3 = path.join(__dirname, 'data/Adjusted records (12.7 mm base) _1 .xlsx');
+    // Percorsi sovrascrivibili via argomenti CLI o variabili d'ambiente
+    const chileFile = process.argv[2] || process.env.CHILE_XLSX ||
+        path.join(__dirname, 'data/BHP_POF_DataExport_ME-BHP-2026-001.xlsx');
+    const madagascarFile = process.argv[3] || process.env.MADAGASCAR_XLSX ||
+        path.join(__dirname, 'data/Adjusted records (12.7 mm base).xlsx');
 
-    console.log("Parsing Zone 1 - File 1:", file1);
-    const data1 = loadAndParse(file1);
+    console.log("Parsing Chile (POF_Data):", chileFile);
+    const chileData = loadAndParse(chileFile, 'POF_Data');
 
-    console.log("Parsing Zone 1 - File 2:", file2);
-    const data2 = loadAndParse(file2);
-
-    const zone1Data = [...data1, ...data2];
-
-    console.log("Parsing Zone 2 - File 3:", file3);
-    const zone2Data = loadAndParse(file3);
+    console.log("Parsing Madagascar (datos):", madagascarFile);
+    const madagascarData = loadAndParse(madagascarFile, 'datos');
 
     const output = [
         {
-            id: "zone1",
-            name: "Minera Escondida - Tratto ME-BHP-2026-001",
-            data: zone1Data
+            id: "chile",
+            name: "Minera Escondida - ME-BHP-2026-001 (Cile)",
+            data: chileData
         },
         {
-            id: "zone2",
-            name: "Nuova Zona Geografica",
-            data: zone2Data
+            id: "madagascar",
+            name: "Madagascar - Adjusted records (12.7 mm base)",
+            data: madagascarData
         }
     ];
 
     const outPath = path.join(__dirname, 'dashboard/public/pipeline_data.json');
     fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
 
-    console.log(`Saved 2 zones to ${outPath}`);
+    console.log(`Saved ${output.length} zones to ${outPath}`);
 }
 
 run();

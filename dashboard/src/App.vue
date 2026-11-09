@@ -200,15 +200,17 @@ const stats = computed(() => {
 watch(selectedZoneId, newId => {
   const zone = zones.value.find(z => z.id === newId);
   if (zone && zone.data && zone.data.length > 0) {
-    const firstValid = zone.data.find(
-      d => d.position && d.position.length >= 2 && !isNaN(d.position[0])
+    const pts = zone.data.filter(
+      d => d.position && d.position.length >= 2 && !isNaN(d.position[0]) && !isNaN(d.position[1])
     );
-    if (firstValid) {
+    if (pts.length) {
+      const lons = pts.map(d => d.position[0]);
+      const lats = pts.map(d => d.position[1]);
       viewState.value = {
         ...viewState.value,
-        longitude: firstValid.position[0],
-        latitude: firstValid.position[1],
-        zoom: 13,
+        longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+        latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+        zoom: 12,
         transitionDuration: 2000
       };
     }
