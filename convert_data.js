@@ -60,6 +60,23 @@ function loadAndParse(filename, sheetName) {
     return parsedData;
 }
 
+// Legge il tracciato completo (colonne: metro, lat, lng) e lo decima ogni `step` punti,
+// mantenendo sempre l'ultimo. Restituisce [[lng, lat], ...] ordinato per metro.
+function loadRoute(filename, sheetName, step = 1) {
+    if (!fs.existsSync(filename)) return [];
+    const wb = xlsx.readFile(filename);
+    const sheet = wb.Sheets[sheetName];
+    if (!sheet) {
+        throw new Error(`Sheet "${sheetName}" not found in ${filename} (available: ${wb.SheetNames.join(', ')})`);
+    }
+    const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 })
+        .filter(r => [0, 1, 2].every(i => typeof r[i] === 'number'))
+        .sort((a, b) => a[0] - b[0]);
+    return rows
+        .filter((r, i) => i % step === 0 || i === rows.length - 1)
+        .map(r => [r[2], r[1]]);
+}
+
 function run() {
     // Percorsi sovrascrivibili via argomenti CLI o variabili d'ambiente
     const chileFile = process.argv[2] || process.env.CHILE_XLSX ||
@@ -73,16 +90,22 @@ function run() {
     console.log("Parsing Madagascar (datos):", madagascarFile);
     const madagascarData = loadAndParse(madagascarFile, 'datos');
 
+    // Tracciato completo: Cile da 'Route' (1 m), Madagascar da 'Hoja1' (210 km, decimato a 5 m)
+    const chileRoute = loadRoute(chileFile, 'Route', 1);
+    const madagascarRoute = loadRoute(madagascarFile, 'Hoja1', 5);
+
     const output = [
         {
             id: "chile",
             name: "Minera Escondida - ME-BHP-2026-001 (Cile)",
-            data: chileData
+            data: chileData,
+            route: chileRoute
         },
         {
             id: "madagascar",
             name: "Madagascar - Adjusted records (12.7 mm base)",
-            data: madagascarData
+            data: madagascarData,
+            route: madagascarRoute
         }
     ];
 
