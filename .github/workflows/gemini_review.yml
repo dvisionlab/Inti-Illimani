@@ -1,0 +1,31 @@
+name: Gemini PR Reviewer
+on:
+    pull_request:
+        types: [opened, synchronize]
+
+jobs:
+    review:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+            issues: write # required to create PR issue comments
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11" # O la versione che preferisci
+
+            - name: Install Dependencies
+              # Installa l'SDK di Gemini e PyGithub
+              run: pip install google-genai PyGithub requests
+
+            - name: Esegui lo script di Review con Gemini
+              env:
+                  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Token automatico di GitHub
+                  PR_NUMBER: ${{ github.event.pull_request.number }}
+              run: python scripts/gemini_reviewer.py
